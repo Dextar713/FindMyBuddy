@@ -26,3 +26,128 @@ We also intend to implement a feed tailored for each user based on the informati
 After a match has been created by the system, a chat is also created instantly just for you two. Because we want to build this app only for connecting people and not long-term chatting or sharing different content, we don't offer support for fancy formatting or persistent messaging. Besides this, on every chat you have the possibility to rate the person you chat with and report it if needed.
 
 
+### User Scenarios
+
+Below are example user scenarios derived from the product vision and features.
+
+1) New user signs up and creates profile
+
+- Actors: New user
+- Context: First-time app user.
+- Main flow:
+  1. Sign up with email/phone.
+  2. Complete profile with age, location, interests.
+  3. Set visibility for each field (Public, Friends-only, Private - algorithm only).
+  4. Complete onboarding.
+- Alternatives:
+  - Skip optional fields.
+  - Uploading a profile picture is not available.
+
+2) Friend matching — anonymous introduction
+
+- Actors: Inviter (user A), Friend 1, Friend 2
+- Context: A wants to introduce two friends who aren't connected.
+- Main flow:
+  1. A selects two friends for anonymous matching.
+  2. System creates an anonymous two-person chat for the matched friends.
+  3. Friends join and chat for a limited time; may exchange permitted contact info.
+ 4. After session, friends may become connected on the app.
+- Alternatives:
+  - A friend declines → match cancelled; inviter notified.
+
+3) Random matching (one-time-per-day)
+
+- Actors: User seeking random match
+- Context: User uses daily random match with optional filters.
+- Main flow:
+  1. Open Random Match, set filters (age, location, interests).
+  2. System finds a match using profile and AI scoring and creates a temporary chat.
+  3. After chat, users rate the interaction.
+- Alternatives:
+  - No match found → suggest broadening filters or try later.
+  - User already used daily match → show cooldown notice.
+
+4) Chatting, rating and matching quality
+
+- Actors: Matched users
+- Context: After a match, a chat is created.
+- Main flow:
+  1. Users chat in a simple text-only session.
+  2. Each user rates the other and may leave feedback.
+  3. Ratings influence future matching priority and AI tuning.
+
+5) Privacy management and algorithm-only fields
+
+- Actors: Any user
+- Context: User wants certain fields hidden but used for matching.
+- Main flow:
+  1. User marks fields as Private (algorithm-only) during edit.
+  2. App uses those fields for matching but hides them from profiles.
+  3. User can change visibility later.
+
+6) Reporting and moderation flow
+
+- Actors: Reporter (user), Moderator/Admin
+- Context: Harassment or inappropriate behavior occurs.
+- Main flow:
+  1. Reporter files report from chat or profile.
+  2. System logs report; high-severity reports may suspend accounts pending review.
+  3. Moderator reviews and takes action; reporter receives status update.
+
+---
+
+### User Stories
+
+Below are user stories derived from the scenarios with acceptance criteria and priorities.
+
+1) As a new user, I want to create a profile with visibility controls so that the matching algorithm can find relevant people while I control what others see.
+Acceptance criteria:
+- User can sign up with email/phone.
+- User can add profile fields and set visibility to Public / Friends-only / Private (algorithm-only).
+- Profile can be created with only required fields; optional fields may be skipped.
+Priority: High
+
+2) As an inviter, I want to anonymously match two friends so that they can be introduced without revealing my identity.
+Acceptance criteria:
+- Inviter can select two friends who are not connected.
+- System creates an anonymous two-person chat visible only to the matched friends.
+- Inviter is not shown in the chat; friends can opt out.
+Priority: High
+
+3) As a user, I want one random match per day with adjustable filters so that I can discover new people similar to me without overuse.
+Acceptance criteria:
+- User can request a random match once per 24 hours.
+- User may set filters (age range, location radius, gender, interests).
+- If no match is found, the app suggests adjustments.
+Priority: High
+
+4) As a matched participant, I want to rate the interaction so that future matches improve and low-quality behavior is discouraged.
+Acceptance criteria:
+- Users can rate matched sessions on a simple scale (e.g., 1-5).
+- Ratings affect matching priority and are stored in user history.
+- System prompts users who don't rate once.
+Priority: Medium
+
+5) As a privacy-conscious user, I want to mark certain profile fields as algorithm-only so that the system can use them without exposing them publicly.
+Acceptance criteria:
+- Profile edit UI includes visibility selector for each field with an option 'Private — used for matching only'.
+- Fields marked private are not visible on other users' profiles.
+Priority: Medium
+
+6) As a user, I want to report abusive behavior so that moderators can review and act on violations.
+Acceptance criteria:
+- A 'Report' action exists in chats and profiles.
+- Reporter can choose a reason and add details.
+- System logs the report and notifies moderators; urgent reports trigger temporary suspension.
+Priority: High
+
+7) As a casual user, I want a lightweight feed of brief updates so that I can check friends' activity without heavy engagement.
+Acceptance criteria:
+- Feed shows short updates from friends and occasional suggested profiles.
+- Feed does not prioritize addictive mechanisms; users can ignore it.
+Priority: Low
+
+### Diagrame C4
+
+![Context diagram](./images/context_diagram.jpeg)
+![Container diagram](./images/container_diagram.jpeg)
