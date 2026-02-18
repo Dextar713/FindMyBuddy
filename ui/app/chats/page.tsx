@@ -252,7 +252,7 @@ export default function ChatsPage() {
         </section>
       </div>
     </div>
-    : <div className="divide-y divide-slate-50">
+    : <div className="divide-y divide-slate-50 bg-amber-50">
       {[1, 2, 3, 4].map((i) => (
         <div key={i} className="p-4 flex items-center gap-4 animate-pulse">
           {/* Avatar Skeleton */}

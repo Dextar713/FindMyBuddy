@@ -155,3 +155,18 @@ Priority: Low
 
 ![Context diagram](./images/context_diagram.jpeg)
 ![Container diagram](./images/container_diagram.jpeg)
+
+
+### Architecture Considerations
+
+- 
+
+### QA
+
+The backend tests are located [here](./api/FriendNetApp.IntegrationTests/).
+
+### Security Analysis
+
+- Password hashing
+- Prevention of XSS by implementing HttpOnly cookies
+- Permissions management based on roles to prevent unauthenticated access
