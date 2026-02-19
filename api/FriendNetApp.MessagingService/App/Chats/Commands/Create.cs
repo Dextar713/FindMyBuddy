@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using FriendNetApp.MessagingService.Data;
 using FriendNetApp.MessagingService.Exceptions;
 using FriendNetApp.MessagingService.Models;
@@ -26,7 +26,7 @@ namespace FriendNetApp.MessagingService.App.Chats.Commands
                     cancellationToken);
                 if (user1 == null)
                 {
-                    throw new NotFoundException("User 1 not found");
+                    throw new NotFoundException("User 1 not found " + command.User1Id.Length);
                 }
                 var user2 = await context.UserReplicas.FirstOrDefaultAsync(
                     u => u.Id.ToString() == command.User2Id,
@@ -36,19 +36,20 @@ namespace FriendNetApp.MessagingService.App.Chats.Commands
                     throw new NotFoundException("User 2 not found");
                 }
 
-                // Idempotency: return existing chat if one already exists for this pair
-                var existing = await context.Chats.FirstOrDefaultAsync(c =>
-                    (c.User1Id == user1.Id && c.User2Id == user2.Id) ||
-                    (c.User1Id == user2.Id && c.User2Id == user1.Id),
+                bool chatExists = await context.Chats.AnyAsync(c =>
+                        (c.User1Id.ToString() == command.User1Id && c.User2Id.ToString() == command.User2Id) ||
+                        (c.User1Id.ToString() == command.User2Id && c.User2Id.ToString() == command.User1Id),
                     cancellationToken);
-
-                if (existing != null)
-                    return existing.Id.ToString();
+                if (chatExists)
+                {
+                    throw new Exception("Chat between these users already exists");
+                }
 
                 Chat chat = new Chat
                 {
                     User1Id = user1.Id,
                     User2Id = user2.Id,
+                    //StartedAt = DateTime.UtcNow
                 };
                 await context.Chats.AddAsync(chat, cancellationToken);
                 bool res = await context.SaveChangesAsync(cancellationToken) > 0;

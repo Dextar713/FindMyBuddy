@@ -12,8 +12,9 @@ namespace FriendNetApp.MessagingService.Dto
         public Guid User2Id { get; set; }
 
         public UserDto? User1 { get; set; }
-        public UserDto? User2 { get; set; }
 
+        public UserDto? User2 { get; set; }
         public ICollection<MessageDto> Messages { get; set; } = new List<MessageDto>();
-    }
+
+    } 
 }

@@ -17,7 +17,7 @@ namespace FriendNetApp.IntegrationTests
 
     public class AspireAppFixture : IAsyncLifetime
     {
-        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(50);
+        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(3);
         private IDistributedApplicationTestingBuilder? _appHost;
         private DistributedApplication _app;
 
@@ -46,7 +46,17 @@ namespace FriendNetApp.IntegrationTests
             await _app.StartAsync(CancellationToken).WaitAsync(DefaultTimeout, CancellationToken);
 
             GatewayClient = _app.CreateHttpClient("gateway");
-            await _app.ResourceNotifications.WaitForResourceHealthyAsync("gateway", CancellationToken).WaitAsync(DefaultTimeout, CancellationToken);
+            List<string> resourcesList = ["gateway", "auth-service", "user-profile-service", 
+            "messaging-service", "social-service", "rabbitmq", "postgres"];
+            
+            foreach(string resourceName in resourcesList)
+            {
+                await _app.ResourceNotifications
+                .WaitForResourceHealthyAsync(resourceName, CancellationToken)
+                .WaitAsync(DefaultTimeout, CancellationToken);
+            }
+            await Task.Delay(2000, CancellationToken);
+
         }
 
         public async Task DisposeAsync()

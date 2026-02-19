@@ -73,7 +73,20 @@ public class AuthController : ControllerBase
             SameSite = SameSiteMode.Strict,
             Expires = DateTime.UtcNow.AddHours(2)
         });
-        return Ok(new { token });
+        return Ok(token);
+    }
+
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        Response.Cookies.Delete("jwt", new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict
+        });
+
+        return Ok(new { message = "Logged out successfully" });
     }
 
     [HttpGet("hello")]

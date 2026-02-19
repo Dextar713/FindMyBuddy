@@ -25,10 +25,9 @@ namespace FriendNetApp.UserProfile.Controllers
         private readonly DeletePhoto.Handler _deletePhoto = deletePhoto;
         private readonly IPhotoService _photoService = photoService;
 
-    [Authorize(Roles = "Client,Admin")]
-    [HttpPost("add-photo")]
-    [Consumes("multipart/form-data")]
-    public async Task<ActionResult<PhotoDto>> AddPhoto([FromForm] IFormFile file)
+        [Authorize(Roles = "Client,Admin")]
+        [HttpPost("add-photo")]
+        public async Task<ActionResult<PhotoDto>> AddPhoto([FromForm] IFormFile file)
         {
             try
             {

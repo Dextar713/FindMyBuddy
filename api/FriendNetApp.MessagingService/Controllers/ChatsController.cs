@@ -106,7 +106,7 @@ namespace FriendNetApp.MessagingService.Controllers
             var curUser = await userAccessor.GetCurrentUserAsync();
             if (curUser.Id != message.SenderId)
             {
-                return Forbid();
+                return Forbid(curUser.Email+"not auth");
             }
 
             var command = new SendMessage.Command

@@ -21,7 +21,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<UserProfileDbContext>(options =>
 {
-    options.UseInMemoryDatabase("UserProfileDb");
+    //options.UseInMemoryDatabase("UserProfileDb");
+    options.UseNpgsql(builder.Configuration.GetConnectionString("user-profile-db"));
 });
 
 builder.Services.AddAutoMapper(cfg =>
@@ -59,7 +60,6 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUserAccessor, UserAccessor>();
 
 var jwtSecret = config["Jwt:SecretKey"] ?? Environment.GetEnvironmentVariable("Jwt:SecretKey") ?? Environment.GetEnvironmentVariable("JWTSECRET");
-
 
 if (string.IsNullOrEmpty(jwtSecret))
 {
@@ -124,23 +124,14 @@ var services = scope.ServiceProvider;
 try
 {
     var context = services.GetRequiredService<UserProfileDbContext>();
-    // If the provider is relational use migrations, otherwise (in-memory, etc.) ensure created.
-    if (context.Database.IsRelational())
-    {
-        await context.Database.MigrateAsync();
-    }
-    else
-    {
-        await context.Database.EnsureCreatedAsync();
-    }
-
-    await DbInitializer.SeedData(context);
+    await context.Database.MigrateAsync();
+    //await DbInitializer.SeedData(context);
 }
 catch (Exception ex)
 {
     // Log the error (uncomment ex variable name and write a log.)
     var logger = services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "An error occurred while migrating/initializing the database:");
+    logger.LogError(ex, "An error occurred while migrating the database:");
 }
 
 

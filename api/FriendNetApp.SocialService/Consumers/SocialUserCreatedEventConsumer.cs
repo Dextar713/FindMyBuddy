@@ -1,3 +1,4 @@
+﻿using System.Diagnostics;
 using FriendNetApp.Contracts.Events;
 using FriendNetApp.SocialService.Data;
 using FriendNetApp.SocialService.Models;
@@ -26,12 +27,12 @@ namespace FriendNetApp.SocialService.Consumers
             {
                 Id = message.Id,
                 Email = message.Email,
-                UserName = message.UserName,
-                Age = message.Age
+                Age = message.Age,
+                Description = message.Description
             };
-
             _db.UserNodes.Add(userNode);
             await _db.SaveChangesAsync();
+            Debug.WriteLine(message.Email+"------------\n\n");
         }
     }
 }
