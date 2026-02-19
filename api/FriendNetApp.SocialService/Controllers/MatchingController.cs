@@ -1,4 +1,4 @@
-﻿using FriendNetApp.SocialService.App.Matching.Commands;
+using FriendNetApp.SocialService.App.Matching.Commands;
 using FriendNetApp.SocialService.App.Matching.Queries;
 using FriendNetApp.SocialService.Dto;
 using FriendNetApp.SocialService.Services;
@@ -13,7 +13,9 @@ namespace FriendNetApp.SocialService.Controllers
         RandomMatch.Handler randomHandler,
         FriendMatch.Handler friendHandler,
         GetAllMatches.Handler getAllHandler,
-        RateMatch.Handler rateHandler) : ControllerBase
+        RateMatch.Handler rateHandler,
+        AcceptMatch.Handler acceptHandler,
+        RejectMatch.Handler rejectHandler) : ControllerBase
     {
         [HttpPost("random")]
         [Authorize(Roles = "Admin,Client")]
@@ -98,6 +100,50 @@ namespace FriendNetApp.SocialService.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ex.Message); 
+            }
+        }
+
+        [HttpPost("{matchId}/accept")]
+        [Authorize(Roles = "Admin,Client")]
+        public async Task<IActionResult> AcceptMatch(string matchId)
+        {
+            var user = await userAccessor.GetCurrentUserAsync();
+            try
+            {
+                bool bothAccepted = await acceptHandler.Handle(new AcceptMatch.Command
+                {
+                    UserId = user.Id,
+                    MatchId = Guid.Parse(matchId)
+                }, CancellationToken.None);
+
+                return Ok(bothAccepted ? "Match accepted by both parties." : "Acceptance recorded. Waiting for the other person.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error accepting match");
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("{matchId}/reject")]
+        [Authorize(Roles = "Admin,Client")]
+        public async Task<IActionResult> RejectMatch(string matchId)
+        {
+            var user = await userAccessor.GetCurrentUserAsync();
+            try
+            {
+                await rejectHandler.Handle(new RejectMatch.Command
+                {
+                    UserId = user.Id,
+                    MatchId = Guid.Parse(matchId)
+                }, CancellationToken.None);
+
+                return Ok("Match rejected.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error rejecting match");
+                return BadRequest(ex.Message);
             }
         }
     }

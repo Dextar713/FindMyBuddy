@@ -14,7 +14,12 @@ var config = builder.Configuration;
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+    {
+        opts.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -23,8 +28,7 @@ builder.Services.AddScoped<IUserAccessor, UserAccessor>();
 
 builder.Services.AddDbContext<SocialDbContext>(options =>
 {
-    //options.UseInMemoryDatabase("SocialDb");
-    options.UseNpgsql(builder.Configuration.GetConnectionString("social-db"));
+    options.UseInMemoryDatabase("SocialDb");
 });
 
 builder.Services.AddAutoMapper(cfg =>
@@ -37,7 +41,6 @@ builder.Services.AddMassTransit(cfg =>
 {
     cfg.AddConsumer<SocialUserCreatedEventConsumer>();
     cfg.AddConsumer<SocialUserUpdatedEventConsumer>();
-    cfg.AddConsumer<SocialUserDeletedEventConsumer>();
     cfg.UsingRabbitMq((context, busCfg) =>
     {
         busCfg.Host(rabbitMqConnectionString);
@@ -118,7 +121,7 @@ var services = scope.ServiceProvider;
 try
 {
     var context = services.GetRequiredService<SocialDbContext>();
-    await context.Database.MigrateAsync();
+    //await context.Database.MigrateAsync();
     //await DbInitializer.SeedData(context);
 }
 catch (Exception ex)

@@ -1,4 +1,3 @@
-﻿using System.Diagnostics;
 using AutoMapper;
 using FriendNetApp.UserProfile.Data;
 using FriendNetApp.UserProfile.Dto;
@@ -18,13 +17,11 @@ namespace FriendNetApp.UserProfile.App.Users.Commands
         public class Handler(
             UserProfileDbContext context,
             IMapper mapper,
-            IPublishEndpoint publish,
-            ILogger<Handler> logger)
+            IPublishEndpoint publish)
         {
             private readonly UserProfileDbContext _context = context;
             private readonly IMapper _mapper = mapper;
             private readonly IPublishEndpoint _publish = publish;
-            private readonly ILogger<Handler> _logger = logger;
 
             public async Task<string> Handle(Command command,
                 CancellationToken cancellationToken)
@@ -32,26 +29,19 @@ namespace FriendNetApp.UserProfile.App.Users.Commands
                 var newUser = _mapper.Map<AppUser>(command.UserInput);
                 await _context.Users.AddAsync(newUser, cancellationToken);
                 await _context.SaveChangesAsync(cancellationToken);
-                try
-                {
-                    await _publish.Publish(new UserCreatedEvent(
-                        newUser.Id,
-                        newUser.UserName,
-                        newUser.Email,
-                        newUser.ProfileImageUrl
-                    ), cancellationToken);
-                    await _publish.Publish(new SocialUserCreatedEvent(
-                        newUser.Id,
-                        newUser.Email,
-                        newUser.Age,
-                        newUser.Description
-                    ), cancellationToken);
-                } catch (Exception ex)
-                {
-                    _logger.LogError("Publish error: "+ex.Message + "------------\n\n");
-                    throw;
-                }
-
+                await _publish.Publish(new UserCreatedEvent(
+                    newUser.Id,
+                    newUser.UserName,
+                    newUser.Email,
+                    newUser.ProfileImageUrl
+                ), cancellationToken);
+                await _publish.Publish(new SocialUserCreatedEvent(
+                    newUser.Id,
+                    newUser.Email,
+                    newUser.UserName,
+                    newUser.Age,
+                    newUser.Description
+                ), cancellationToken);
                 return newUser.Id.ToString();
             }
         }

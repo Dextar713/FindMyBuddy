@@ -1,4 +1,4 @@
-﻿using FriendNetApp.SocialService.Models;
+using FriendNetApp.SocialService.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace FriendNetApp.SocialService.Data
@@ -8,6 +8,7 @@ namespace FriendNetApp.SocialService.Data
         public DbSet<Match> Matches { get; set; }
         public DbSet<UserNode> UserNodes { get; set; } 
         public DbSet<Friendship> Friendships { get; set; }
+        public DbSet<Block> Blocks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -25,11 +26,27 @@ namespace FriendNetApp.SocialService.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            modelBuilder.Entity<Block>(entity =>
+            {
+                entity.HasKey(b => new { b.BlockerId, b.BlockedId });
+                entity.HasOne(b => b.Blocker)
+                    .WithMany()
+                    .HasForeignKey(b => b.BlockerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(b => b.Blocked)
+                    .WithMany()
+                    .HasForeignKey(b => b.BlockedId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
             modelBuilder.Entity<Match>(entity =>
             {
                 entity.HasKey(m => m.Id);
 
                 entity.Property(m => m.Type)
+                    .HasConversion<string>();
+
+                entity.Property(m => m.Status)
                     .HasConversion<string>();
 
                 entity.HasOne(m => m.User1)

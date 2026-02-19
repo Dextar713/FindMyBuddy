@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace FriendNetApp.SocialService.Models
 {
@@ -8,9 +8,10 @@ namespace FriendNetApp.SocialService.Models
 
         [Required] [MaxLength(70)] [EmailAddress]
         public required string Email { get; set; }
-        public int? Age { get; set; }
 
-        [MaxLength(200)]
-        public string Description { get; set; } = string.Empty;
+        [MaxLength(50)]
+        public string? UserName { get; set; }
+
+        public int? Age { get; set; }
     }
 }

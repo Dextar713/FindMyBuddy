@@ -21,25 +21,13 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("CorsPolicy", policy =>
-    {
-        policy.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:5001" })
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials(); 
-    });
-});
-
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUserAccessor, UserAccessor>();
 
 
 builder.Services.AddDbContext<MessagingDbContext>(options =>
 {
-    //options.UseInMemoryDatabase("MessagingDb");
-    options.UseNpgsql(builder.Configuration.GetConnectionString("messaging-db"));
+    options.UseInMemoryDatabase("MessagingDb");
 });
 
 
@@ -62,7 +50,7 @@ builder.Services.AddMassTransit(cfg =>
 { 
     cfg.AddConsumer<UserCreatedEventConsumer>();
     cfg.AddConsumer<UserUpdatedEventConsumer>();
-    cfg.AddConsumer<UserDeletedEventConsumer>();
+    cfg.AddConsumer<MatchAcceptedEventConsumer>();
 
     cfg.UsingRabbitMq((context, busCfg) =>
     {
@@ -114,14 +102,6 @@ builder.Services.AddAuthentication(options =>
                 if (!string.IsNullOrEmpty(token))
                 {
                     context.Token = token;
-                    return Task.CompletedTask;
-                }
-
-                var accessToken = context.Request.Query["access_token"].ToString();
-                var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
-                {
-                    context.Token = accessToken;
                 }
 
                 return Task.CompletedTask;
@@ -152,25 +132,9 @@ if (app.Environment.IsDevelopment())
 }
 
 //app.UseHttpsRedirection();
-app.UseCors("CorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapHub<ChatHub>("/messaging/hubs/chat");
+app.MapHub<ChatHub>("/hubs/chat");
 app.MapControllers();
-
-using var scope = app.Services.CreateScope();
-var services = scope.ServiceProvider;
-try
-{
-    var context = services.GetRequiredService<MessagingDbContext>();
-    await context.Database.MigrateAsync();
-    //await DbInitializer.SeedData(context);
-}
-catch (Exception ex)
-{
-    // Log the error (uncomment ex variable name and write a log.)
-    var logger = services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "An error occurred while migrating the database:");
-}
 
 app.Run();

@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FriendNetApp.Contracts.Events;
 using FriendNetApp.UserProfile.Data;
 using FriendNetApp.UserProfile.Dto;
@@ -47,6 +47,7 @@ namespace FriendNetApp.UserProfile.App.Users.Commands
                 await _publish.Publish(new SocialUserUpdatedEvent(
                     user.Id,
                     user.Email,
+                    user.UserName,
                     user.Age,
                     user.Description
                 ), cancellationToken);
