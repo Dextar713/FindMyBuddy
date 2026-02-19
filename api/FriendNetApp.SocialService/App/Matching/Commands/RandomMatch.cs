@@ -78,7 +78,7 @@ namespace FriendNetApp.SocialService.App.Matching.Commands
 
                 var match = new Match
                 {
-                    Type = MatchType.Random,
+                    Type = Models.MatchType.Random,
                     User1Id = userId,
                     User2Id = randomUserId,
                     Status = MatchStatus.Pending,

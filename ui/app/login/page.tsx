@@ -25,7 +25,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      await apiClient.post('/auth/login', { email, password });
+      const responseLogin = await apiClient.post('/auth/login', { email, password });
 
       const responseUser = await apiClient.get(`/users/find-by-email?email=${email}`);
       setCurrentUser(responseUser.data);

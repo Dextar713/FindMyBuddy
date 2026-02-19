@@ -5,7 +5,7 @@ namespace FriendNetApp.SocialService.Dto
     public class MatchDto
     {
         public required Guid Id { get; set; }
-        public MatchType Type { get; set; }
+        public Models.MatchType Type { get; set; }
         public MatchStatus Status { get; set; }
         public required Guid User1Id { get; set; }
         public required Guid User2Id { get; set; }
