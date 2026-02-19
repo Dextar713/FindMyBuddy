@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace FriendNetApp.Contracts.Events
 {
     public record SocialUserCreatedEvent
     (
         Guid Id,
         string Email,
+        string UserName,
         int? Age,
         string Description
     );
@@ -17,7 +12,8 @@ namespace FriendNetApp.Contracts.Events
     public record SocialUserUpdatedEvent
     (
         Guid Id,
-        string Email, 
+        string Email,
+        string UserName,
         int? Age,
         string Description
     );

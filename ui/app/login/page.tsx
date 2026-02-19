@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import apiClient from '@/lib/api_client';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, ArrowRight, Loader2, Link } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
@@ -12,11 +12,11 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const { setIsLoggedIn } = useAuth();
+  const { setCurrentUser, logout } = useAuth();
 
+  // Clear any existing session when landing on login
   useEffect(() => {
-    localStorage.removeItem("user");
-    setIsLoggedIn(false);
+    logout();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -25,36 +25,25 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Using the utility we built - it handles headers and base URL automatically
-      const response: any = await apiClient.post('/auth/login', { email, password });
-      
-      // Save token (Update this logic if using Cookies)
-      // localStorage.setItem('auth_token', response.token);
+      await apiClient.post('/auth/login', { email, password });
 
       const responseUser = await apiClient.get(`/users/find-by-email?email=${email}`);
-      console.log(responseUser.data);
-
-      localStorage.setItem('user', JSON.stringify(responseUser.data));
+      setCurrentUser(responseUser.data);
 
       router.push('/profile');
-      setIsLoggedIn(true);
     } catch (err: any) {
-      setError(err || 'Invalid credentials. Please try again.');
+      setError(err.response?.data?.message ?? err.message ?? 'Invalid credentials. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (isLoading) {
-    return null;
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-      <div className="w-full max-auto max-w-100">
-        {/* Logo / Branding */}
+      <div className="w-full max-w-100">
+        {/* Branding */}
         <div className="text-center mb-8">
-          <div className="text-3xl font-bold tracking-tighter text-indigo-600 mb-2">PureLink</div>
+          <div className="text-3xl font-bold tracking-tighter text-indigo-600 mb-2">Find Your Buddy</div>
           <p className="text-slate-500 text-sm">Welcome back. Enter your details to continue.</p>
         </div>
 
@@ -96,9 +85,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <p className="text-red-500 text-xs font-medium bg-red-50 p-3 rounded-xl">
-                {error}
-              </p>
+              <p className="text-red-500 text-xs font-medium bg-red-50 p-3 rounded-xl">{error}</p>
             )}
 
             <button
@@ -119,14 +106,14 @@ export default function LoginPage() {
 
           <div className="mt-8 pt-6 border-t border-slate-50 text-center">
             <p className="text-slate-500 text-sm">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <a href="/register" className="text-indigo-600 font-bold hover:underline">
                 Join now
               </a>
             </p>
           </div>
         </div>
-        
+
         <p className="mt-8 text-center text-slate-400 text-xs px-4 leading-relaxed">
           By continuing, you agree to our Terms of Service and Privacy Policy.
         </p>

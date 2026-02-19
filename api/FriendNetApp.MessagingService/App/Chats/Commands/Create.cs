@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FriendNetApp.MessagingService.Data;
 using FriendNetApp.MessagingService.Exceptions;
 using FriendNetApp.MessagingService.Models;
@@ -35,6 +35,15 @@ namespace FriendNetApp.MessagingService.App.Chats.Commands
                 {
                     throw new NotFoundException("User 2 not found");
                 }
+
+                // Idempotency: return existing chat if one already exists for this pair
+                var existing = await context.Chats.FirstOrDefaultAsync(c =>
+                    (c.User1Id == user1.Id && c.User2Id == user2.Id) ||
+                    (c.User1Id == user2.Id && c.User2Id == user1.Id),
+                    cancellationToken);
+
+                if (existing != null)
+                    return existing.Id.ToString();
 
                 Chat chat = new Chat
                 {

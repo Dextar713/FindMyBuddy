@@ -7,22 +7,16 @@ import { Lock, Mail, ArrowRight, Loader2, Sparkles, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function RegisterPage() {
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-  });
+  const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const { setIsLoggedIn, isLoggedIn } = useAuth();
+  const { setCurrentUser, logout } = useAuth();
 
+  // Clear any existing session when landing on register
   useEffect(() => {
-    localStorage.removeItem("user");
-    setIsLoggedIn(false);
+    logout();
   }, []);
-
-  console.log(isLoggedIn);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -34,48 +28,27 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      // Direct call to our utility - handles base URL and complex logic
-      const responseAuth: any = await apiClient.post('/auth/register', {
+      await apiClient.post('/auth/register', {
         email: formData.email,
         password: formData.password,
-        role: "Admin"
+        role: 'Admin',
       });
-
-      console.log(responseAuth)
-      
-      // Auto-login after registration
-      // localStorage.setItem('auth_token', responseAuth.token);
 
       const userId = await apiClient.post('/users/create', {
         email: formData.email,
-        userName: formData.username
-      })
-      
-      console.log(userId.data)
-      console.log(typeof userId.data)
+        userName: formData.username,
+      });
 
       const responseUser = await apiClient.get(`/users/${userId.data}`);
-      console.log(responseUser.data);
-
-      localStorage.setItem('user', JSON.stringify(responseUser.data));
+      setCurrentUser(responseUser.data);
 
       router.push('/profile');
-      setIsLoggedIn(true);
     } catch (err: any) {
-        console.error(err);
-
-        if (err.response?.data) {
-          // Error returned from your backend or proxy
-          setError(
-            err.response.data.message ||
-            JSON.stringify(err.response.data)
-          );
-        } else if (err.message) {
-          // Network / JS error
-          setError(err.message);
-        } else {
-          setError('Something went wrong. Please try again.');
-        }
+      if (err.response?.data) {
+        setError(err.response.data.message ?? JSON.stringify(err.response.data));
+      } else {
+        setError(err.message ?? 'Something went wrong. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -90,13 +63,12 @@ export default function RegisterPage() {
             <Sparkles className="w-6 h-6 text-indigo-600" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Create Account</h1>
-          <p className="text-slate-500 mt-2">Join PureLink and start meeting people.</p>
+          <p className="text-slate-500 mt-2">Join Find Your Buddy and start meeting people.</p>
         </div>
 
         {/* Card */}
         <div className="bg-white p-8 text-black rounded-4xl shadow-xl shadow-slate-200/60 border border-slate-100">
           <form onSubmit={handleRegister} className="space-y-5">
-            {/* Full Name Field */}
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">
                 Display Name
@@ -114,7 +86,7 @@ export default function RegisterPage() {
                 />
               </div>
             </div>
-            {/* Email Field */}
+
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">
                 Email Address
@@ -133,7 +105,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Password Field */}
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">
                 Password
@@ -153,9 +124,7 @@ export default function RegisterPage() {
             </div>
 
             {error && (
-              <p className="text-red-500 text-xs font-medium bg-red-50 p-3 rounded-xl border border-red-100">
-                {error}
-              </p>
+              <p className="text-red-500 text-xs font-medium bg-red-50 p-3 rounded-xl border border-red-100">{error}</p>
             )}
 
             <button

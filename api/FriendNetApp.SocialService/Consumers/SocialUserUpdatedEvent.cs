@@ -1,4 +1,4 @@
-﻿using FriendNetApp.Contracts.Events;
+using FriendNetApp.Contracts.Events;
 using FriendNetApp.SocialService.Data;
 using MassTransit;
 
@@ -20,6 +20,9 @@ namespace FriendNetApp.SocialService.Consumers
             var userNode = await _db.UserNodes.FindAsync(m.Id);
             if (userNode == null)
                 return; // user not cached yet (orphan event)
+
+            if (userNode.UserName != m.UserName)
+                userNode.UserName = m.UserName;
 
             if (userNode.Age != m.Age)
                 userNode.Age = m.Age;

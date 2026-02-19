@@ -1,4 +1,4 @@
-﻿using FriendNetApp.Contracts.Events;
+using FriendNetApp.Contracts.Events;
 using FriendNetApp.SocialService.Data;
 using FriendNetApp.SocialService.Models;
 using MassTransit;
@@ -26,6 +26,7 @@ namespace FriendNetApp.SocialService.Consumers
             {
                 Id = message.Id,
                 Email = message.Email,
+                UserName = message.UserName,
                 Age = message.Age
             };
 

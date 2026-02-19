@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FriendNetApp.UserProfile.Data;
 using FriendNetApp.UserProfile.Dto;
 using FriendNetApp.UserProfile.Models;
@@ -38,6 +38,7 @@ namespace FriendNetApp.UserProfile.App.Users.Commands
                 await _publish.Publish(new SocialUserCreatedEvent(
                     newUser.Id,
                     newUser.Email,
+                    newUser.UserName,
                     newUser.Age,
                     newUser.Description
                 ), cancellationToken);
