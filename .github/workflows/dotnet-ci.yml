@@ -40,25 +40,25 @@ jobs:
       env:
         JWTSECRET: ${{ secrets.JWTSECRET || 'dev-ci-secret-change-me-please-32chars-min' }}
         DOTNET_ENVIRONMENT: Development
-      run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~RegisterCreateGetAll" --no-build --verbosity normal
+      run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --configuration Release --filter "FullyQualifiedName~RegisterCreateGetAll" --no-build --verbosity normal
 
     - name: Run Messaging Tests
       working-directory: api
       env:
         JWTSECRET: ${{ secrets.JWTSECRET || 'dev-ci-secret-change-me-please-32chars-min' }}
         DOTNET_ENVIRONMENT: Development
-      run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~MessagingFunctionalTests" --no-build --verbosity normal
+      run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --configuration Release --filter "FullyQualifiedName~MessagingFunctionalTests" --no-build --verbosity normal
 
     - name: Run Social Tests
       working-directory: api
       env:
         JWTSECRET: ${{ secrets.JWTSECRET || 'dev-ci-secret-change-me-please-32chars-min' }}
         DOTNET_ENVIRONMENT: Development
-      run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~SocialFunctionalTests" --no-build --verbosity normal
+      run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --configuration Release --filter "FullyQualifiedName~SocialFunctionalTests" --no-build --verbosity normal
 
     - name: Run Extended Integration Tests
       working-directory: api
       env:
         JWTSECRET: ${{ secrets.JWTSECRET || 'dev-ci-secret-change-me-please-32chars-min' }}
         DOTNET_ENVIRONMENT: Development
-      run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~ExtendedScenariosTests" --no-build --verbosity normal
+      run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --configuration Release --filter "FullyQualifiedName~ExtendedScenariosTests" --no-build --verbosity normal
