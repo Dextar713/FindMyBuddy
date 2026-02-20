@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FriendNetApp.SocialService.Data;
 using FriendNetApp.SocialService.Dto;
 using FriendNetApp.SocialService.Models;
@@ -44,6 +44,16 @@ namespace FriendNetApp.SocialService.App.Matching.Commands
                 if (!inviterFriendWithA || !inviterFriendWithB)
                 {
                     throw new InvalidOperationException("Inviter must be friends with both UserA and UserB to create this match.");
+                }
+
+                // Prevent introducing two users who are already friends with each other
+                var aAndBAreAlreadyFriends = await context.Friendships.AnyAsync(f =>
+                    (f.User1Id == req.UserAId && f.User2Id == req.UserBId) ||
+                    (f.User1Id == req.UserBId && f.User2Id == req.UserAId),
+                    cancellationToken);
+                if (aAndBAreAlreadyFriends)
+                {
+                    throw new InvalidOperationException("UserA and UserB are already friends.");
                 }
 
                 var matchExists = await context.Matches.AnyAsync(m =>
