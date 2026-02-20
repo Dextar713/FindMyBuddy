@@ -2,9 +2,9 @@ name: .NET Aspire CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main", "master" ]
 
 jobs:
   test:
@@ -18,6 +18,10 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
+        cache: true
+        cache-dependency-path: |
+          api/**/*.csproj
+          api/**/packages.lock.json
 
     - name: Install Aspire Workload
       run: dotnet workload install aspire
@@ -28,34 +32,33 @@ jobs:
       run: dotnet restore FriendNetApp.sln
 
     - name: Build
-      env:
-        working-directory: api
-        run: dotnet build FriendNetApp.sln --no-restore --configuration Release
+      working-directory: api
+      run: dotnet build FriendNetApp.sln --no-restore --configuration Release
 
     - name: Run Auth Tests
+      working-directory: api
       env:
-        JWTSECRET: ${{ secrets.JWTSECRET }}
+        JWTSECRET: ${{ secrets.JWTSECRET || 'dev-ci-secret-change-me-please-32chars-min' }}
         DOTNET_ENVIRONMENT: Development
-        working-directory: api
-        run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~RegisterCreateGetAll" --no-build --verbosity normal
+      run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~RegisterCreateGetAll" --no-build --verbosity normal
 
     - name: Run Messaging Tests
+      working-directory: api
       env:
-        JWTSECRET: ${{ secrets.JWTSECRET }}
+        JWTSECRET: ${{ secrets.JWTSECRET || 'dev-ci-secret-change-me-please-32chars-min' }}
         DOTNET_ENVIRONMENT: Development
-        working-directory: api
-        run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~MessagingFunctionalTests" --no-build --verbosity normal
+      run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~MessagingFunctionalTests" --no-build --verbosity normal
 
     - name: Run Social Tests
+      working-directory: api
       env:
-        JWTSECRET: ${{ secrets.JWTSECRET }}
+        JWTSECRET: ${{ secrets.JWTSECRET || 'dev-ci-secret-change-me-please-32chars-min' }}
         DOTNET_ENVIRONMENT: Development
-        working-directory: api
-        run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~SocialFunctionalTests" --no-build --verbosity normal
+      run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~SocialFunctionalTests" --no-build --verbosity normal
 
     - name: Run Extended Integration Tests
+      working-directory: api
       env:
-        JWTSECRET: ${{ secrets.JWTSECRET }}
+        JWTSECRET: ${{ secrets.JWTSECRET || 'dev-ci-secret-change-me-please-32chars-min' }}
         DOTNET_ENVIRONMENT: Development
-        working-directory: api
-        run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~ExtendedScenariosTests" --no-build --verbosity normal
+      run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~ExtendedScenariosTests" --no-build --verbosity normal
