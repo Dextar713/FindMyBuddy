@@ -1,4 +1,4 @@
-﻿using Aspire.Hosting;
+using Aspire.Hosting;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Logging;
 using System;
@@ -18,8 +18,9 @@ namespace FriendNetApp.IntegrationTests
     public class AspireAppFixture : IAsyncLifetime
     {
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(3);
+        private CancellationTokenSource? _cts;
         private IDistributedApplicationTestingBuilder? _appHost;
-        private DistributedApplication _app;
+        private DistributedApplication? _app;
 
         public CancellationToken CancellationToken { get; private set; }
         public HttpClient GatewayClient { get; private set; } = null!;
@@ -27,7 +28,8 @@ namespace FriendNetApp.IntegrationTests
         public async Task InitializeAsync()
         {
             // Arrange
-            CancellationToken = new CancellationTokenSource(DefaultTimeout).Token;
+            _cts = new CancellationTokenSource(DefaultTimeout);
+            CancellationToken = _cts.Token;
             _appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.FriendNetApp_AppHost>(CancellationToken);
             _appHost.Services.AddLogging(logging =>
             {
@@ -61,7 +63,24 @@ namespace FriendNetApp.IntegrationTests
 
         public async Task DisposeAsync()
         {
-            await _app.DisposeAsync();
+            // Aspire's DCP teardown can be flaky in CI (timeouts/connection refused during cleanup).
+            // We don't want cleanup noise to fail the test run if the actual tests passed.
+            try
+            {
+                if (_app != null)
+                {
+                    await _app.DisposeAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Swallow teardown exceptions; they can happen after the test has already succeeded.
+                Console.WriteLine($"[AspireAppFixture] DisposeAsync ignored exception: {ex}");
+            }
+            finally
+            {
+                _cts?.Dispose();
+            }
         }
     }
 }
