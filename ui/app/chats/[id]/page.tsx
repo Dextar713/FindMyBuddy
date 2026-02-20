@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Send, User, MoreVertical, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, User, MoreVertical, Loader2, Ban } from 'lucide-react';
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import { v4 as uuidv4 } from 'uuid';
 import apiClient from '@/lib/api_client';
@@ -40,11 +40,29 @@ export default function SingleChatPage() {
   const { currentUser, token } = useAuth();
 
   const recipientName = searchParams.get('recipient') ?? 'Chat';
+  const recipientId = searchParams.get('recipientId') ?? '';
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Determine whether this chat partner is blocked by current user
+  useEffect(() => {
+    const loadBlocked = async () => {
+      if (!recipientId || !currentUser) return;
+      try {
+        const res = await apiClient.get('/social/blocks');
+        const blocks: any[] = res.data ?? [];
+        setIsBlocked(blocks.some((b) => String(b.blockedId ?? b.BlockedId) === recipientId));
+      } catch {
+        // ignore
+      }
+    };
+    loadBlocked();
+  }, [recipientId, currentUser]);
 
   // Fetch initial chat history
   useEffect(() => {
@@ -70,7 +88,7 @@ export default function SingleChatPage() {
           ? params.id[0]
           : undefined;
 
-    if (!chatId || !currentUser || !token) {
+    if (!chatId || !currentUser || !token || isBlocked) {
       setIsConnected(false);
       return;
     }
@@ -134,7 +152,7 @@ export default function SingleChatPage() {
       connection.stop().catch(() => undefined);
       connectionRef.current = null;
     };
-  }, [params.id, currentUser, token]);
+  }, [params.id, currentUser, token, isBlocked]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -143,7 +161,7 @@ export default function SingleChatPage() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !currentUser || !connectionRef.current) return;
+    if (!newMessage.trim() || !currentUser || !connectionRef.current || isBlocked) return;
 
     const messageData: Message = {
       // Important: server broadcasts back the DTO it received (not DB-generated Id),
@@ -198,9 +216,41 @@ export default function SingleChatPage() {
             </p>
           </div>
         </div>
-        <button className="p-2 text-slate-400 hover:text-slate-600">
+        <div className="relative">
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="p-2 text-slate-400 hover:text-slate-600"
+            aria-label="Chat options"
+          >
           <MoreVertical size={20} />
-        </button>
+          </button>
+
+          {menuOpen && (
+            <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-100 rounded-2xl shadow-lg overflow-hidden">
+              <button
+                onClick={async () => {
+                  setMenuOpen(false);
+                  if (!recipientId) return;
+                  if (!confirm(`Block ${recipientName}? You will no longer see this chat.`)) return;
+                  try {
+                    await apiClient.post('/social/blocks', { blockedId: recipientId });
+                    setIsBlocked(true);
+                    // Stop live connection and return to chats list (where it will be hidden)
+                    await connectionRef.current?.stop().catch(() => undefined);
+                    router.push('/chats');
+                  } catch (err) {
+                    console.error('Failed to block user', err);
+                    alert('Failed to block user.');
+                  }
+                }}
+                className="w-full px-4 py-3 text-sm font-semibold text-left hover:bg-slate-50 flex items-center gap-2"
+              >
+                <Ban size={16} className="text-red-500" />
+                Block user
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       {/* Messages Area */}
@@ -247,16 +297,21 @@ export default function SingleChatPage() {
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
             className="flex-1 bg-slate-100 text-gray-600 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-            disabled={!isConnected}
+            disabled={!isConnected || isBlocked}
           />
           <button
             type="submit"
-            disabled={!newMessage.trim() || !isConnected}
+            disabled={!newMessage.trim() || !isConnected || isBlocked}
             className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center hover:bg-indigo-700 hover:scale-105 transition-all active:scale-95 disabled:opacity-50"
           >
             <Send size={18} />
           </button>
         </form>
+        {isBlocked && (
+          <div className="max-w-4xl mx-auto mt-2 text-xs text-red-600 font-semibold">
+            You blocked this user. Unblock them by using “New Conversation” and connecting by username.
+          </div>
+        )}
       </footer>
     </div>
   );

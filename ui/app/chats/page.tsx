@@ -46,6 +46,7 @@ export default function ChatsPage() {
   const router = useRouter();
 
   const [chats, setChats] = useState<ChatPreview[]>([]);
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
   // New conversation
@@ -60,8 +61,14 @@ export default function ChatsPage() {
   useEffect(() => {
     const fetchChats = async () => {
       try {
-        const res = await apiClient.get('/messaging/chats/all');
-        setChats(res.data ?? []);
+        const [chatsRes, blocksRes] = await Promise.all([
+          apiClient.get('/messaging/chats/all'),
+          apiClient.get('/social/blocks'),
+        ]);
+
+        setChats(chatsRes.data ?? []);
+        const blocks: any[] = blocksRes.data ?? [];
+        setBlockedIds(new Set(blocks.map((b) => String(b.blockedId ?? b.blockedId ?? b.BlockedId))));
       } catch (err) {
         console.error('Failed to load chats', err);
       } finally {
@@ -89,6 +96,13 @@ export default function ChatsPage() {
         return;
       }
 
+      // If this user is currently blocked, unblock them first (so old messages can reappear)
+      try {
+        await apiClient.delete(`/social/blocks/${foundUser.id}`);
+      } catch {
+        // Not blocked (or already unblocked) — proceed
+      }
+
       // 2. Create friendship (ignore if it already exists)
       try {
         await apiClient.post('/social/friendships', {
@@ -105,7 +119,9 @@ export default function ChatsPage() {
         user2Id: foundUser.id,
       });
 
-      router.push(`/chats/${resChat.data}?recipient=${encodeURIComponent(foundUser.userName)}`);
+      router.push(
+        `/chats/${resChat.data}?recipient=${encodeURIComponent(foundUser.userName)}&recipientId=${encodeURIComponent(foundUser.id)}`,
+      );
     } catch {
       alert('User not found or could not start a conversation.');
     } finally {
@@ -146,6 +162,8 @@ export default function ChatsPage() {
 
   const getOtherUser = (chat: ChatPreview) =>
     chat.user1.userName === currentUser?.userName ? chat.user2 : chat.user1;
+  const getOtherId = (chat: ChatPreview) =>
+    chat.user1Id === currentUser?.id ? chat.user2Id : chat.user1Id;
 
   if (!currentUser || isLoading) {
     return (
@@ -263,13 +281,20 @@ export default function ChatsPage() {
 
           <div className="divide-y divide-slate-50">
             {chats.length > 0 ? (
-              chats.map((chat) => {
+              chats
+              .filter((chat) => !blockedIds.has(getOtherId(chat)))
+              .map((chat) => {
                 const other = getOtherUser(chat);
+                const otherId = getOtherId(chat);
                 const lastMsg = chat.messages.at(-1);
                 return (
                   <div
                     key={chat.id}
-                    onClick={() => router.push(`/chats/${chat.id}?recipient=${encodeURIComponent(other.userName)}`)}
+                    onClick={() =>
+                      router.push(
+                        `/chats/${chat.id}?recipient=${encodeURIComponent(other.userName)}&recipientId=${encodeURIComponent(otherId)}`,
+                      )
+                    }
                     className="p-4 flex items-center gap-4 hover:bg-slate-50 cursor-pointer transition-colors group"
                   >
                     <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
