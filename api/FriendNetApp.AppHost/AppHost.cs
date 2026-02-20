@@ -12,7 +12,8 @@ var postgresUsername = builder.AddParameter("postgres-username", "postgres");
 var postgres = builder.AddPostgres("postgres")
     .WithUserName(postgresUsername)
     .WithPassword(postgresPassword)
-    .WithImagePullPolicy(ImagePullPolicy.Missing);
+    .WithImagePullPolicy(ImagePullPolicy.Missing)
+    .WithDataVolume("postgres");
 
 var authDb = postgres.AddDatabase("authdb");
 var userProfileDb = postgres.AddDatabase("user-profile-db");

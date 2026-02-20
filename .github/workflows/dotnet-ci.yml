@@ -2,9 +2,9 @@ name: .NET Aspire CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "main", "main2" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "master", "main", "main2" ]
 
 jobs:
   test:
@@ -22,32 +22,39 @@ jobs:
     - name: Install Aspire Workload
       run: dotnet workload install aspire
 
+    # Run dotnet commands inside the `api` folder where the solution lives.
     - name: Restore dependencies
-      run: dotnet restore
+      working-directory: api
+      run: dotnet restore FriendNetApp.sln
 
     - name: Build
-      run: dotnet build --no-restore
+      working-directory: api
+      run: dotnet build FriendNetApp.sln --no-restore --configuration Release
 
     - name: Run Auth Tests
       env:
         JWTSECRET: ${{ secrets.JWTSECRET }}
         DOTNET_ENVIRONMENT: Development
-      run: dotnet test --filter "FullyQualifiedName~RegisterCreateGetAll" --no-build --verbosity normal
+  working-directory: api
+  run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~RegisterCreateGetAll" --no-build --verbosity normal
 
     - name: Run Messaging Tests
       env:
         JWTSECRET: ${{ secrets.JWTSECRET }}
         DOTNET_ENVIRONMENT: Development
-      run: dotnet test --filter "FullyQualifiedName~MessagingFunctionalTests" --no-build --verbosity normal
+  working-directory: api
+  run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~MessagingFunctionalTests" --no-build --verbosity normal
 
     - name: Run Social Tests
       env:
         JWTSECRET: ${{ secrets.JWTSECRET }}
         DOTNET_ENVIRONMENT: Development
-      run: dotnet test --filter "FullyQualifiedName~SocialFunctionalTests" --no-build --verbosity normal
+  working-directory: api
+  run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~SocialFunctionalTests" --no-build --verbosity normal
 
     - name: Run Extended Integration Tests
       env:
         JWTSECRET: ${{ secrets.JWTSECRET }}
         DOTNET_ENVIRONMENT: Development
-      run: dotnet test --filter "FullyQualifiedName~ExtendedScenariosTests" --no-build --verbosity normal
+  working-directory: api
+  run: dotnet test FriendNetApp.IntegrationTests/FriendNetApp.IntegrationTests.csproj --filter "FullyQualifiedName~ExtendedScenariosTests" --no-build --verbosity normal
