@@ -74,7 +74,15 @@ var profile_scenario = Scenario.Create("create_profile", async context =>
                 return Response.Fail(statusCode:response.StatusCode.ToString(), message:"Login failed" + errorMessage);
             }
 
-            token = await response.Content.ReadAsStringAsync();
+            try
+            {
+                var dict = await response.Content.ReadFromJsonAsync<Dictionary<string, string?>>();
+                token = dict != null && dict.TryGetValue("token", out var t) ? (t ?? "") : "";
+            }
+            catch
+            {
+                token = (await response.Content.ReadAsStringAsync()).Trim('\"');
+            }
             return !string.IsNullOrEmpty(token) ? Response.Ok() : Response.Fail(message:"No token");
 
         });

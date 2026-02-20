@@ -1,4 +1,4 @@
-﻿using AuthService.Data;
+using AuthService.Data;
 using Microsoft.AspNetCore.Mvc;
 using AuthService.Models;
 using AuthService.Services;
@@ -69,11 +69,11 @@ public class AuthController : ControllerBase
         Response.Cookies.Append("jwt", token, new CookieOptions
         {
             HttpOnly = true,
-            Secure = true, // set to true in production (requires HTTPS)
+            Secure = false, // set to true in production (requires HTTPS)
             SameSite = SameSiteMode.Strict,
             Expires = DateTime.UtcNow.AddHours(2)
         });
-        return Ok(token);
+        return Ok(new { token });
     }
 
     [HttpPost("logout")]
