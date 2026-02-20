@@ -196,7 +196,7 @@ export default function SingleChatPage() {
   return (
     <div className="flex flex-col h-screen bg-white">
       {/* Header */}
-      <header className="fixed top-0 w-full h-16 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center px-4 justify-between z-10">
+  <header className="fixed top-0 w-full h-16 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center px-4 justify-between z-60">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
