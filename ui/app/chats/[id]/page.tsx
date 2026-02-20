@@ -216,40 +216,47 @@ export default function SingleChatPage() {
             </p>
           </div>
         </div>
-        <div className="relative">
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="p-2 text-slate-400 hover:text-slate-600"
-            aria-label="Chat options"
-          >
-          <MoreVertical size={20} />
-          </button>
-
-          {menuOpen && (
-            <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-100 rounded-2xl shadow-lg overflow-hidden">
-              <button
-                onClick={async () => {
-                  setMenuOpen(false);
-                  if (!recipientId) return;
-                  if (!confirm(`Block ${recipientName}? You will no longer see this chat.`)) return;
-                  try {
-                    await apiClient.post('/social/blocks', { blockedId: recipientId });
-                    setIsBlocked(true);
-                    // Stop live connection and return to chats list (where it will be hidden)
-                    await connectionRef.current?.stop().catch(() => undefined);
-                    router.push('/chats');
-                  } catch (err) {
-                    console.error('Failed to block user', err);
-                    alert('Failed to block user.');
-                  }
-                }}
-                className="w-full px-4 py-3 text-sm font-semibold text-left hover:bg-slate-50 flex items-center gap-2"
-              >
-                <Ban size={16} className="text-red-500" />
-                Block user
-              </button>
-            </div>
+        <div className="flex items-center gap-2">
+          {/* Visible block action (requested) */}
+          {recipientId && !isBlocked && (
+            <button
+              onClick={async () => {
+                if (!confirm(`Block ${recipientName}? You will no longer see this chat.`)) return;
+                try {
+                  await apiClient.post('/social/blocks', { blockedId: recipientId });
+                  setIsBlocked(true);
+                  await connectionRef.current?.stop().catch(() => undefined);
+                  router.push('/chats');
+                } catch (err) {
+                  console.error('Failed to block user', err);
+                  alert('Failed to block user.');
+                }
+              }}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+              title="Block user"
+            >
+              <Ban size={16} />
+              <span className="hidden sm:inline">Block</span>
+            </button>
           )}
+
+          {recipientId && isBlocked && (
+            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-red-700 bg-red-50 border border-red-100">
+              <Ban size={14} />
+              Blocked
+            </span>
+          )}
+
+          {/* Keep the menu for future options */}
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="p-2 text-slate-400 hover:text-slate-600"
+              aria-label="Chat options"
+            >
+              <MoreVertical size={20} />
+            </button>
+          </div>
         </div>
       </header>
 
