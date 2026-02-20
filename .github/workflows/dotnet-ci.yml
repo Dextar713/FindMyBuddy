@@ -28,8 +28,9 @@ jobs:
       run: dotnet restore FriendNetApp.sln
 
     - name: Build
-      working-directory: api
-      run: dotnet build FriendNetApp.sln --no-restore --configuration Release
+      env:
+        working-directory: api
+        run: dotnet build FriendNetApp.sln --no-restore --configuration Release
 
     - name: Run Auth Tests
       env:
