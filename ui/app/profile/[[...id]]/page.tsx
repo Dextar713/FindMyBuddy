@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { User, AlignLeft, ShieldCheck, Loader2 } from 'lucide-react';
 import apiClient from '@/lib/api_client';
 import { useAuth, CurrentUser } from '@/context/AuthContext';
@@ -13,10 +14,13 @@ interface Profile {
   age?: number;
 }
 
-// [[...id]] gives params.id as string[] | undefined
-export default function ProfilePage({ params }: { params: { id?: string[] } }) {
+export default function ProfilePage() {
+  // Next 15/16: page `params` can be async in server components. Since this is a client page,
+  // use the navigation hook instead to avoid the \"params is a Promise\" runtime error.
+  const params = useParams();
   const { currentUser, setCurrentUser } = useAuth();
-  const profileId = params.id?.[0];
+  const rawId = (params as any)?.id as string | string[] | undefined;
+  const profileId = Array.isArray(rawId) ? rawId[0] : rawId;
   const isOwner = !profileId;
 
   const [profile, setProfile] = useState<Profile | null>(null);
