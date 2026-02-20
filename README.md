@@ -151,7 +151,7 @@ Acceptance criteria:
 - Feed does not prioritize addictive mechanisms; users can ignore it.
 Priority: Low
 
-### Diagrame C4
+### Diagrams
 
 ![Context diagram](./images/context_diagram.jpeg)
 ![Container diagram](./images/container_diagram.jpeg)
@@ -159,14 +159,167 @@ Priority: Low
 
 ### Architecture Considerations
 
-- 
+### Brief App Overview
+
+**Find Your Buddy** is a matching + chat app built around 3 flows:
+
+- **Direct connect by username**: find someone by username → become friends → open a chat.
+- **Friend introduction (anonymous)**: you introduce **two of your friends** to each other; they see each other’s profiles but **do not see the inviter**; both must accept to become friends and get a chat.
+- **Random match**: the system picks a random eligible person (not already friend, not blocked, not already in a pending match), optionally filtered by age; both must accept to become friends and get a chat.
+
+Blocking is supported in the backend and used in the UI to hide chats for the blocker.
+
+---
+
+### Architecture Description
+
+This repository is split into:
+
+- **Backend (`api/`)**: .NET microservices orchestrated with **.NET Aspire**.
+- **Frontend (`ui/`)**: Next.js app (App Router) that calls the API via a small proxy route.
+
+#### Backend services
+
+- **AuthService** (`api/FriendNetApp.AuthService/`)
+  - User credentials and login/register.
+  - Issues **JWT** tokens.
+- **UserProfile** (`api/FriendNetApp.UserProfile/`)
+  - Canonical profile data (userName, email, age, description, photo metadata).
+  - Publishes user events so other services can maintain local replicas.
+- **SocialService** (`api/FriendNetApp.SocialService/`)
+  - Relationships and matching domain logic:
+    - `Friendship`
+    - `Block`
+    - `Match` (with `Status` + per-user acceptance)
+  - Ensures inviter anonymity by **not exposing `InviterId`** in match DTOs.
+- **MessagingService** (`api/FriendNetApp.MessagingService/`)
+  - Chats and messages.
+  - **SignalR** hub for real-time messaging (`/messaging/hubs/chat`).
+- **Gateway** (`api/FriendNetApp.Gateway/`)
+  - YARP reverse proxy. Routes `/friendnet/*` to the appropriate service.
+- **Contracts** (`api/FriendNetApp.Contracts/`)
+  - Shared MassTransit event contracts.
+
+#### Infrastructure
+
+- **PostgreSQL**: provisioned by Aspire as multiple databases (one per service).
+- **RabbitMQ**: used with MassTransit for asynchronous events.
+
+#### High-level flow
+
+```mermaid
+flowchart LR
+  UI[Next.js UI] -->|/api/...| UIProxy[Next.js API proxy]
+  UIProxy -->|/friendnet/...| Gateway[YARP Gateway]
+
+  Gateway --> Auth[AuthService]
+  Gateway --> Profile[UserProfile]
+  Gateway --> Social[SocialService]
+  Gateway --> Msg[MessagingService]
+
+  Social -->|MatchAcceptedEvent| Rabbit[(RabbitMQ)]
+  Rabbit --> Msg
+
+  UI -->|SignalR WebSocket| Gateway
+  Gateway --> Msg
+```
+
+---
+
+### Key Design Decisions (with tradeoffs)
+
+#### 1) Match acceptance is two-sided
+- **Decision**: `Match` has `Status` (`Pending/Accepted/Rejected`) and `User1Accepted/User2Accepted` flags.
+- **Why**: supports both friend-intro and random match flows where **both users must accept**.
+- **Tradeoff**: slightly more state to maintain; needs careful idempotency (handled in code).
+
+#### 2) Inviter anonymity is enforced at the API boundary
+- **Decision**: SocialService’s `MatchDto` **does not include** `InviterId`.
+- **Why**: prevents accidental leakage of inviter identity in client code or logs.
+- **Tradeoff**: makes some analytics/admin tooling harder unless a separate admin-only DTO is added.
+
+#### 3) Event-driven chat creation
+- **Decision**: when both users accept a match, SocialService publishes `MatchAcceptedEvent`; MessagingService consumes it and creates (or reuses) a chat.
+- **Why**: avoids cross-service HTTP coupling and keeps Messaging the owner of chat creation.
+- **Tradeoff**: eventual consistency; requires RabbitMQ running and consumers healthy.
+
+#### 4) Local user replicas for performance and service autonomy
+- **Decision**: SocialService stores `UserNode` replicas (including `UserName`), MessagingService stores `UserReplica`.
+- **Why**: services can render match/chat data without synchronous calls to UserProfile.
+- **Tradeoff**: duplicated data; requires event consumers and consistency handling.
+
+#### 5) Blocking does not delete chats
+- **Decision**: blocking is modeled in SocialService; UI hides chats for the blocker instead of deleting the chat.
+- **Why**: “remove only for blocker” while keeping history for possible unblocks.
+- **Tradeoff**: MessagingService will still accept messages unless you add enforcement there too (optional hardening).
+
+---
 
 ### QA
 
-The backend tests are located [here](./api/FriendNetApp.IntegrationTests/).
+#### Testing objectives
+
+- Validate core user journeys across services:
+  - Register/login → create profile → match → accept → chat creation.
+- Prevent regressions in cross-service integration (events, gateway routing, Postgres migrations).
+- Validate real-time messaging behavior (SignalR).
+- Provide basic performance confidence for key endpoints.
+
+#### Test types in this repo
+
+- **Integration tests**: `api/FriendNetApp.IntegrationTests/`
+  - Uses **Aspire.Hosting.Testing** to start the full distributed app in a test environment.
+  - Covers Auth, Social, Messaging flows (including SignalR).
+  - Note: tests are configured to avoid parallelization to reduce flakiness when provisioning Aspire resources.
+- **Load tests**: `api/FriendNetApp.LoadTests/`
+  - Uses **NBomber** for basic load and scenario testing (e.g., auth/login and profile creation flows).
+
+#### When tests run in the product lifecycle
+
+- During development: run integration tests locally when changing contracts, routing, matching logic, or messaging.
+- Before merge: CI runs restore/build/test.
+- Optional: run NBomber load tests before releases or when changing DB/event/messaging code paths.
 
 ### Security Analysis
 
-- Password hashing
-- Prevention of XSS by implementing HttpOnly cookies
-- Permissions management based on roles to prevent unauthenticated access
+This project uses common baseline controls, with explicit tradeoffs and areas for improvement.
+
+#### Authentication & authorization
+
+- **JWT-based authentication** issued by AuthService.
+- JWT is stored as an **httpOnly cookie** for browser flows (mitigates token theft via XSS).
+- Services enforce access with `[Authorize(Roles = "Admin,Client")]`.
+
+#### Password storage
+
+- Passwords are stored as hashes (ASP.NET Core `PasswordHasher`).
+
+#### Cookie security notes
+
+- In development, `Secure=false` is used for HTTP; production should set:
+  - `Secure=true` (HTTPS only)
+  - consider `SameSite=Lax` for typical browser flows; use `None` only when required (with HTTPS).
+- Consider adding CSRF protection if you keep cookies as the primary auth mechanism for state-changing endpoints.
+
+#### API hardening considerations (considerations for next steps)
+
+- **Rate limiting** for login and match endpoints.
+- **Audit logging** for block/report/match creation.
+- **Messaging enforcement**: currently blocking is enforced at Social/UI level; to prevent a blocked user from sending messages, add checks in MessagingService (e.g. query Social or maintain a block replica).
+- **Secrets management**: keep `JWTSECRET` in GitHub Secrets / environment, never in repo.
+
+---
+
+### CI/CD
+
+#### CI (GitHub Actions)
+
+- Workflow: `.github/workflows/dotnet-ci.yml`
+- Responsibilities:
+  - Checkout
+  - Setup .NET SDK + Aspire workload
+  - Restore + Build (Release)
+  - Run integration tests (Release)
+  - Cache NuGet dependencies for faster runs
+
+**Note**: integration tests start the distributed app via Aspire. CI must support Docker (GitHub-hosted runners do).
