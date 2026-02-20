@@ -1,9 +1,11 @@
-﻿using FriendNetApp.MessagingService.App.Chats.Commands;
+using FriendNetApp.MessagingService.App.Chats.Commands;
 using FriendNetApp.MessagingService.App.Chats.Queries;
+using FriendNetApp.MessagingService.Dto;
+using FriendNetApp.MessagingService.Hubs;
+using FriendNetApp.MessagingService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using FriendNetApp.MessagingService.Dto;
-using FriendNetApp.MessagingService.Services;
+using Microsoft.AspNetCore.SignalR;
 
 namespace FriendNetApp.MessagingService.Controllers
 {
@@ -14,7 +16,8 @@ namespace FriendNetApp.MessagingService.Controllers
         GetChatHistory.Handler getChatHistory,
         Create.Handler createChat,
         SendMessage.Handler sendMessage,
-        Delete.Handler deleteChat) : ControllerBase
+        Delete.Handler deleteChat,
+        IHubContext<ChatHub> hubContext) : ControllerBase
     {
         [HttpGet("all")]
         [Authorize(Roles = "Admin,Client")]
@@ -116,6 +119,8 @@ namespace FriendNetApp.MessagingService.Controllers
             try
             {
                 string messageId = await sendMessage.Handle(command, CancellationToken.None);
+                await hubContext.Clients.Group(message.ChatId.ToString())
+                    .SendAsync("ReceiveMessage", message);
                 return Ok(messageId);
             }
             catch (Exception ex)

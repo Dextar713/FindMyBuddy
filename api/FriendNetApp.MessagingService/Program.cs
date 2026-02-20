@@ -24,10 +24,22 @@ builder.Services.AddSignalR();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUserAccessor, UserAccessor>();
 
+// CORS for SignalR WebSocket connections from frontend
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 
 builder.Services.AddDbContext<MessagingDbContext>(options =>
 {
-    options.UseInMemoryDatabase("MessagingDb");
+    options.UseNpgsql(config.GetConnectionString("messaging-db"));
 });
 
 
@@ -93,17 +105,25 @@ builder.Services.AddAuthentication(options =>
     })
     .AddJwtBearer(options =>
     {
-        // Read the token from the "jwt" cookie instead of Authorization header
+        // Read token from query string (SignalR access_token) or cookie (browser)
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
-                var token = context.Request.Cookies["jwt"];
-                if (!string.IsNullOrEmpty(token))
+                // SignalR query-string token (used by integration tests and non-cookie clients)
+                var qs = context.Request.Query["access_token"].ToString();
+                if (!string.IsNullOrEmpty(qs) &&
+                    context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
                 {
-                    context.Token = token;
+                    context.Token = qs;
+                    return Task.CompletedTask;
                 }
-
+                // Cookie token (used by the browser frontend)
+                var cookie = context.Request.Cookies["jwt"];
+                if (!string.IsNullOrEmpty(cookie))
+                {
+                    context.Token = cookie;
+                }
                 return Task.CompletedTask;
             }
         };
@@ -132,9 +152,23 @@ if (app.Environment.IsDevelopment())
 }
 
 //app.UseHttpsRedirection();
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapControllers();
+
+using var scope = app.Services.CreateScope();
+var services = scope.ServiceProvider;
+try
+{
+    var context = services.GetRequiredService<MessagingDbContext>();
+    await context.Database.MigrateAsync();
+}
+catch (Exception ex)
+{
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "An error occurred while migrating the database:");
+}
 
 app.Run();

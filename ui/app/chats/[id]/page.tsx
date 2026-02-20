@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Send, User, MoreVertical, Loader2 } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
+import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import apiClient from '@/lib/api_client';
 import { useAuth } from '@/context/AuthContext';
 
@@ -34,6 +34,7 @@ export default function SingleChatPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const connectionRef = useRef<HubConnection | null>(null);
 
   const { currentUser } = useAuth();
 
@@ -42,8 +43,9 @@ export default function SingleChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
 
-  // Fetch chat history
+  // Fetch initial chat history
   useEffect(() => {
     const fetchHistory = async () => {
       try {
@@ -55,8 +57,56 @@ export default function SingleChatPage() {
         setIsLoading(false);
       }
     };
-    fetchHistory();
+    if (params.id) fetchHistory();
   }, [params.id]);
+
+  // Setup SignalR connection
+  useEffect(() => {
+    if (!params.id || !currentUser) return;
+
+    const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:5001';
+    const hubUrl = `${gatewayUrl}/friendnet/messaging/hubs/chat?chatId=${params.id}`;
+
+    const connection = new HubConnectionBuilder()
+      .withUrl(hubUrl, {
+        withCredentials: true, // Send cookies (jwt) with the connection
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    connectionRef.current = connection;
+
+    // Handle incoming messages
+    connection.on('ReceiveMessage', (message: Message) => {
+      setMessages((prev) => {
+        // Avoid duplicates - check if message already exists
+        if (prev.some((m) => m.id === message.id)) return prev;
+        return [...prev, message];
+      });
+    });
+
+    // Handle connection state
+    connection.onclose(() => setIsConnected(false));
+    connection.onreconnecting(() => setIsConnected(false));
+    connection.onreconnected(() => setIsConnected(true));
+
+    // Start connection
+    connection
+      .start()
+      .then(() => {
+        setIsConnected(true);
+      })
+      .catch((err) => {
+        console.error('SignalR connection error:', err);
+        setIsConnected(false);
+      });
+
+    // Cleanup on unmount
+    return () => {
+      connection.stop().catch(console.error);
+      connectionRef.current = null;
+    };
+  }, [params.id, currentUser]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -65,10 +115,10 @@ export default function SingleChatPage() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !currentUser) return;
+    if (!newMessage.trim() || !currentUser || !connectionRef.current) return;
 
     const messageData: Message = {
-      id: uuidv4(),
+      id: '', // Server will generate the ID
       content: newMessage,
       senderId: currentUser.id,
       chatId: params.id?.toString() ?? '',
@@ -77,12 +127,23 @@ export default function SingleChatPage() {
     };
 
     setNewMessage('');
-    setMessages((prev) => [...prev, messageData]);
+
+    // Optimistic update - add message immediately
+    const optimisticMessage: Message = {
+      ...messageData,
+      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+    };
+    setMessages((prev) => [...prev, optimisticMessage]);
 
     try {
-      await apiClient.post('/messaging/chats/send', messageData);
+      // Send via SignalR hub
+      await connectionRef.current.invoke('SendMessage', { Message: messageData });
+      // Note: The server will broadcast the real message back via ReceiveMessage,
+      // which will replace the optimistic one (or we could remove the optimistic one here)
     } catch (err) {
       console.error('Message failed to send', err);
+      // Remove optimistic message on error
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
     }
   };
 
@@ -102,7 +163,11 @@ export default function SingleChatPage() {
           </div>
           <div>
             <h1 className="font-bold text-slate-900 leading-tight">{recipientName}</h1>
-            <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Online</p>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${
+              isConnected ? 'text-emerald-500' : 'text-slate-400'
+            }`}>
+              {isConnected ? 'Online' : 'Connecting...'}
+            </p>
           </div>
         </div>
         <button className="p-2 text-slate-400 hover:text-slate-600">
@@ -154,10 +219,11 @@ export default function SingleChatPage() {
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
             className="flex-1 bg-slate-100 text-gray-600 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            disabled={!isConnected}
           />
           <button
             type="submit"
-            disabled={!newMessage.trim()}
+            disabled={!newMessage.trim() || !isConnected}
             className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center hover:bg-indigo-700 hover:scale-105 transition-all active:scale-95 disabled:opacity-50"
           >
             <Send size={18} />
