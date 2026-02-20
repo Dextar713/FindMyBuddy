@@ -158,12 +158,10 @@ export default function SingleChatPage() {
 
     setNewMessage('');
 
-    // Optimistic update - add message immediately
-    const optimisticMessage: Message = {
-      ...messageData,
-      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
-    };
-    setMessages((prev) => [...prev, optimisticMessage]);
+    // Optimistic update - add message immediately.
+    // Important: use the SAME id as messageData so when the server echoes it back
+    // via ReceiveMessage, our dedupe-by-id keeps only one copy.
+    setMessages((prev) => [...prev, messageData]);
 
     try {
       // Send via SignalR hub
@@ -173,7 +171,7 @@ export default function SingleChatPage() {
     } catch (err) {
       console.error('Message failed to send', err);
       // Remove optimistic message on error
-      setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
+      setMessages((prev) => prev.filter((m) => m.id !== messageData.id));
     }
   };
 
