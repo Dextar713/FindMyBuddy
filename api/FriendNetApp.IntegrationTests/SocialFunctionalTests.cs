@@ -67,7 +67,8 @@ namespace FriendNetApp.IntegrationTests
             var match = await TestHelpers.FriendMatchAsync(_client, tokenInviter, aId, bId);
             Assert.NotNull(match);
             Assert.Equal(MatchType.FromFriend, match.Type);
-            Assert.Equal(inviterId, match.InviterId?.ToString());
+            // InviterId is intentionally omitted from the Social API MatchDto to keep inviter anonymous
+            Assert.Null(match.InviterId);
         }
 
         [Fact]
