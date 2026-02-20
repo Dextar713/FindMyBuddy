@@ -11,7 +11,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const { setCurrentUser, logout } = useAuth();
+  const { setCurrentUser, setToken, logout } = useAuth();
 
   // Clear any existing session when landing on register
   useEffect(() => {
@@ -28,11 +28,13 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      await apiClient.post('/auth/register', {
+      const regRes = await apiClient.post('/auth/register', {
         email: formData.email,
         password: formData.password,
         role: 'Admin',
       });
+      const token = typeof regRes.data === 'string' ? regRes.data : regRes.data?.token;
+      if (token) setToken(token);
 
       const userId = await apiClient.post('/users/create', {
         email: formData.email,

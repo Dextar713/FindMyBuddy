@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const { setCurrentUser, logout } = useAuth();
+  const { setCurrentUser, setToken, logout } = useAuth();
 
   // Clear any existing session when landing on login
   useEffect(() => {
@@ -26,6 +26,8 @@ export default function LoginPage() {
 
     try {
       const responseLogin = await apiClient.post('/auth/login', { email, password });
+      const token = typeof responseLogin.data === 'string' ? responseLogin.data : responseLogin.data?.token;
+      if (token) setToken(token);
 
       const responseUser = await apiClient.get(`/users/find-by-email?email=${email}`);
       setCurrentUser(responseUser.data);

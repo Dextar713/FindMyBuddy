@@ -36,7 +36,7 @@ export default function SingleChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const connectionRef = useRef<HubConnection | null>(null);
 
-  const { currentUser } = useAuth();
+  const { currentUser, token } = useAuth();
 
   const recipientName = searchParams.get('recipient') ?? 'Chat';
 
@@ -60,7 +60,7 @@ export default function SingleChatPage() {
     if (params.id) fetchHistory();
   }, [params.id]);
 
-  // Setup SignalR connection
+  // Setup SignalR connection (token is sent via accessTokenProvider because cookie is not sent cross-origin to the gateway)
   useEffect(() => {
     if (!params.id || !currentUser) return;
 
@@ -69,7 +69,8 @@ export default function SingleChatPage() {
 
     const connection = new HubConnectionBuilder()
       .withUrl(hubUrl, {
-        withCredentials: true, // Send cookies (jwt) with the connection
+        withCredentials: true,
+        accessTokenFactory: () => Promise.resolve(token ?? ''),
       })
       .withAutomaticReconnect()
       .build();
@@ -106,7 +107,7 @@ export default function SingleChatPage() {
       connection.stop().catch(console.error);
       connectionRef.current = null;
     };
-  }, [params.id, currentUser]);
+  }, [params.id, currentUser, token]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
