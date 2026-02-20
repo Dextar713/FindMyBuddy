@@ -34,7 +34,11 @@ export default function LoginPage() {
 
       router.push('/profile');
     } catch (err: any) {
-      setError(err.response?.data?.message ?? err.message ?? 'Invalid credentials. Please try again.');
+      if (err.response?.data) {
+        setError(err.response.data.message ?? JSON.stringify(err.response.data));
+      } else {
+        setError(err.message ?? 'Something went wrong. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
