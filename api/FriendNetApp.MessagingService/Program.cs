@@ -113,7 +113,8 @@ builder.Services.AddAuthentication(options =>
                 // SignalR query-string token (used by integration tests and non-cookie clients)
                 var qs = context.Request.Query["access_token"].ToString();
                 if (!string.IsNullOrEmpty(qs) &&
-                    context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                    (context.HttpContext.Request.Path.StartsWithSegments("/hubs")
+                     || context.HttpContext.Request.Path.StartsWithSegments("/messaging/hubs")))
                 {
                     context.Token = qs;
                     return Task.CompletedTask;
@@ -155,7 +156,8 @@ if (app.Environment.IsDevelopment())
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapHub<ChatHub>("/hubs/chat");
+// Gateway forwards /friendnet/messaging/... -> /messaging/... to this service
+app.MapHub<ChatHub>("/messaging/hubs/chat");
 app.MapControllers();
 
 using var scope = app.Services.CreateScope();

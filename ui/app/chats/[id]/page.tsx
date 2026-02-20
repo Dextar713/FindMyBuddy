@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Send, User, MoreVertical, Loader2 } from 'lucide-react';
-import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
+import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
+import { v4 as uuidv4 } from 'uuid';
 import apiClient from '@/lib/api_client';
 import { useAuth } from '@/context/AuthContext';
 
@@ -62,16 +63,34 @@ export default function SingleChatPage() {
 
   // Setup SignalR connection (token is sent via accessTokenProvider because cookie is not sent cross-origin to the gateway)
   useEffect(() => {
-    if (!params.id || !currentUser) return;
+    const chatId =
+      typeof params.id === 'string'
+        ? params.id
+        : Array.isArray(params.id)
+          ? params.id[0]
+          : undefined;
+
+    if (!chatId || !currentUser || !token) {
+      setIsConnected(false);
+      return;
+    }
 
     const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:5001';
-    const hubUrl = `${gatewayUrl}/friendnet/messaging/hubs/chat?chatId=${params.id}`;
+    const hubUrl = `${gatewayUrl}/friendnet/messaging/hubs/chat?chatId=${encodeURIComponent(chatId)}`;
 
+    // Stop any previous connection before creating a new one (dev StrictMode / token refresh / route changes)
+    if (connectionRef.current) {
+      connectionRef.current.stop().catch(() => undefined);
+      connectionRef.current = null;
+    }
+
+    let disposed = false;
     const connection = new HubConnectionBuilder()
       .withUrl(hubUrl, {
         withCredentials: true,
         accessTokenFactory: () => Promise.resolve(token ?? ''),
       })
+      .configureLogging(LogLevel.Information)
       .withAutomaticReconnect()
       .build();
 
@@ -95,16 +114,24 @@ export default function SingleChatPage() {
     connection
       .start()
       .then(() => {
-        setIsConnected(true);
+        if (!disposed) setIsConnected(true);
       })
       .catch((err) => {
+        if (disposed) return;
+        // Common in Next.js dev/StrictMode: cleanup stops the connection during start()
+        const msg = String(err?.message ?? err);
+        if (msg.includes('stopped during negotiation')) {
+          setIsConnected(false);
+          return;
+        }
         console.error('SignalR connection error:', err);
         setIsConnected(false);
       });
 
     // Cleanup on unmount
     return () => {
-      connection.stop().catch(console.error);
+      disposed = true;
+      connection.stop().catch(() => undefined);
       connectionRef.current = null;
     };
   }, [params.id, currentUser, token]);
@@ -119,7 +146,9 @@ export default function SingleChatPage() {
     if (!newMessage.trim() || !currentUser || !connectionRef.current) return;
 
     const messageData: Message = {
-      id: '', // Server will generate the ID
+      // Important: server broadcasts back the DTO it received (not DB-generated Id),
+      // so we must generate a stable Id client-side to avoid duplicates.
+      id: uuidv4(),
       content: newMessage,
       senderId: currentUser.id,
       chatId: params.id?.toString() ?? '',
