@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 
 namespace FriendNetApp.IntegrationTests
 {
@@ -143,6 +144,7 @@ namespace FriendNetApp.IntegrationTests
         }
     }
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum MatchType
     {
         FromFriend =0,
