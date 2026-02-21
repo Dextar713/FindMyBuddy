@@ -49,7 +49,7 @@ namespace FriendNetApp.IntegrationTests
             await TestHelpers.CreateFriendshipAsync(_client, tokenA, aId, dId);
 
             // wait for eventual consistency
-            await Task.Delay(2000);
+            await Task.Delay(5000);
 
             // Create chat between A and B as A
             using (var req = new HttpRequestMessage(HttpMethod.Post, "/friendnet/messaging/chats/create") { Content = JsonContent.Create(new { User1Id = aId, User2Id = bId }) })
