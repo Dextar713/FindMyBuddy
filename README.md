@@ -153,8 +153,10 @@ Priority: Low
 
 ### Diagrams
 
-![Context diagram](./images/context_diagram.jpeg)
-![Container diagram](./images/container_diagram.jpeg)
+![](./images/big_diagram.jpeg)
+![](./images/Untitled.jpeg)
+![](./images/database_tables.jpeg)
+![](./images/BPMD.jpeg)
 
 
 ### Architecture Considerations
@@ -294,12 +296,6 @@ This project uses common baseline controls, with explicit tradeoffs and areas fo
 
 - Passwords are stored as hashes (ASP.NET Core `PasswordHasher`).
 
-#### Cookie security notes
-
-- In development, `Secure=false` is used for HTTP; production should set:
-  - `Secure=true` (HTTPS only)
-  - consider `SameSite=Lax` for typical browser flows; use `None` only when required (with HTTPS).
-- Consider adding CSRF protection if you keep cookies as the primary auth mechanism for state-changing endpoints.
 
 #### API hardening considerations (considerations for next steps)
 
